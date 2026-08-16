@@ -20,6 +20,13 @@ Refer to technology-specific instruction files:
 
 ## Core Principles
 
+### Comments and documentation
+
+- Write comments only when they preserve intent, constraints, or reasoning that the code cannot communicate clearly on its own.
+- Do not narrate markup, restate an event handler's mechanics, or paraphrase the next line of code.
+- Update or remove comments whenever related behavior changes; outdated documentation is a defect.
+- Treat a reusable component's `Props` interface as its public contract. Add a TSDoc/JSDoc block that explains the component's purpose and document non-obvious props, defaults, accepted variants, and rendering behavior.
+
 ### Testability
 
 - Every interactive element MUST include a `data-testid` attribute
