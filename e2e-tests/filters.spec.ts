@@ -8,6 +8,7 @@ test.describe('Game Catalog Filters', () => {
   test('shows accessible controls and the complete catalog initially', async ({ page }) => {
     await test.step('Verify the filter structure and labels', async () => {
       await expect(page.getByRole('heading', { name: 'Filter games' })).toBeVisible();
+      await expect(page.getByRole('searchbox', { name: 'Search by title' })).toBeVisible();
       await expect(page.getByRole('group', { name: 'Categories' })).toBeVisible();
       await expect(page.getByRole('checkbox', { name: 'Strategy' })).toBeVisible();
       await expect(page.getByRole('combobox', { name: 'Publisher' })).toBeVisible();
@@ -18,6 +19,51 @@ test.describe('Game Catalog Filters', () => {
       await expect(page.locator('[data-testid="game-card"]:visible')).toHaveCount(21);
       await expect(page.getByTestId('game-filter-summary')).toHaveText('21 of 21 games shown.');
     });
+  });
+
+  test('filters by title as the player types without regard to case', async ({ page }) => {
+    const titleSearch = page.getByRole('searchbox', { name: 'Search by title' });
+
+    await test.step('Type a lowercase partial title', async () => {
+      await titleSearch.fill('code');
+    });
+
+    await test.step('Verify only case-insensitive title matches remain', async () => {
+      const visibleCards = page.locator('[data-testid="game-card"]:visible');
+      await expect(visibleCards).toHaveCount(2);
+      await expect(visibleCards).toContainText([
+        'Code Puzzle Chronicles',
+        'Code Quest Odyssey',
+      ]);
+      await expect(page.getByTestId('game-filter-summary')).toHaveText('2 of 21 games shown.');
+    });
+  });
+
+  test('combines title search with category and publisher filters', async ({ page }) => {
+    await test.step('Search and select additional filters', async () => {
+      await page.getByRole('searchbox', { name: 'Search by title' }).fill('code');
+      await page.getByRole('checkbox', { name: 'Adventure' }).check();
+      await page.getByRole('combobox', { name: 'Publisher' }).selectOption({
+        label: 'CodeForge Studios',
+      });
+    });
+
+    await test.step('Verify every active condition is applied', async () => {
+      const visibleCards = page.locator('[data-testid="game-card"]:visible');
+      await expect(visibleCards).toHaveCount(1);
+      await expect(visibleCards).toContainText('Code Quest Odyssey');
+      await expect(page.getByTestId('game-filter-summary')).toHaveText('1 of 21 games shown.');
+    });
+  });
+
+  test('shows an empty state when no title matches', async ({ page }) => {
+    await page.getByRole('searchbox', { name: 'Search by title' }).fill('not a real game');
+
+    await expect(page.getByTestId('games-grid')).toBeHidden();
+    await expect(page.getByTestId('filter-empty-state-text')).toHaveText(
+      'No games match your search or selected filters.',
+    );
+    await expect(page.getByTestId('game-filter-summary')).toHaveText('0 of 21 games shown.');
   });
 
   test('matches any selected category', async ({ page }) => {
@@ -64,6 +110,7 @@ test.describe('Game Catalog Filters', () => {
     });
 
     await test.step('Verify controls and results return to their defaults', async () => {
+      await expect(page.getByRole('searchbox', { name: 'Search by title' })).toHaveValue('');
       await expect(page.getByRole('checkbox', { name: 'Action' })).not.toBeChecked();
       await expect(page.getByRole('combobox', { name: 'Publisher' })).toHaveValue('');
       await expect(page.locator('[data-testid="game-card"]:visible')).toHaveCount(21);
@@ -88,12 +135,21 @@ test.describe('Game Catalog Filters', () => {
 
     await expect(page.getByTestId('games-grid')).toBeHidden();
     await expect(page.getByTestId('filter-empty-state')).toHaveText(
-      'No games match the selected filters.',
+      'No games match your search or selected filters.',
     );
     await expect(page.getByTestId('game-filter-summary')).toHaveText('0 of 21 games shown.');
   });
 
   test('supports keyboard operation for category and publisher controls', async ({ page }) => {
+    await test.step('Focus and type in title search with the keyboard', async () => {
+      const titleSearch = page.getByRole('searchbox', { name: 'Search by title' });
+      await titleSearch.focus();
+      await expect(titleSearch).toBeFocused();
+      await titleSearch.pressSequentially('code');
+      await expect(page.getByTestId('game-filter-summary')).toHaveText('2 of 21 games shown.');
+      await titleSearch.fill('');
+    });
+
     await test.step('Toggle a category with the keyboard', async () => {
       const strategyFilter = page.getByRole('checkbox', { name: 'Strategy' });
       await strategyFilter.focus();
